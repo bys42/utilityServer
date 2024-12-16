@@ -1,12 +1,16 @@
 const Koa = require('koa');
 const Router = require('koa-router');
+const https = require("https");
+const http = require("http");
+const path = require('path');
+const fs = require('fs')
 
 const cors = require('@koa/cors');
 const serve = require('koa-static');
 const compose = require('koa-compose');
 
 const vastRouter = require("./router/vast")
-const trackingRouter = require("./router/tracking")
+const trackingRouter = require("./router/tracking");
 
 const app = new Koa();
 
@@ -29,8 +33,19 @@ app.on('error', (err, ctx) => {
 
 app.use(serve("./static"))
 
-// 啟動服務器
-const port = 3060;
-app.listen(port, () => {
-    console.log(`服務器運行在 http://localhost:${port}`);
-});
+const config = {
+    http: {
+        port: 3060,
+    },
+    https: {
+        port: 3080,
+        options: {
+            key: fs.readFileSync(path.resolve(process.cwd(), 'certs/server.key'), 'utf8').toString(),
+            cert: fs.readFileSync(path.resolve(process.cwd(), 'certs/server.crt'), 'utf8').toString(),
+        },
+    },
+};
+
+const serverCallback = app.callback();
+http.createServer(serverCallback).listen(config.http.port);
+https.createServer(config.https.options, serverCallback).listen(config.https.port);
