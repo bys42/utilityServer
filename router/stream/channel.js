@@ -1,16 +1,18 @@
 const { parseM3u8File } = require("./parseM3u8File");
 const path = require("path");
+const fs = require("fs");
 
-const ASSET_FOLDER_PATH = path.join(__dirname, "../../static/asset/");
-const ASSET_URI_ROOT = "../../asset/";
-const M3U8_DIR_LIST = ["september", "letsgroove", "rythm"];
 const CHANNEL_M3U8_SIZE = 10;
 
 let channelInfo = null;
 
-async function init() {
+async function init(m3u8Folder, tsUrlRoot) {
+    const m3u8NameList = fs
+        .readdirSync(m3u8Folder, { withFileTypes: true })
+        .filter((dirent) => dirent.isDirectory())
+        .map((dirent) => dirent.name);
     const playlists = await Promise.all(
-        M3U8_DIR_LIST.map((m3u8Dir) => parseM3u8File(path.join(ASSET_FOLDER_PATH, m3u8Dir, "index.m3u8")))
+        m3u8NameList.map((m3u8Dir) => parseM3u8File(path.join(m3u8Folder, m3u8Dir, "index.m3u8")))
     );
     const targetDuration = Math.max(...playlists.map((playlist) => playlist.targetDuration));
 
@@ -18,7 +20,7 @@ async function init() {
     let segments = [];
 
     playlists.forEach((playlist, index) => {
-        const uriPrefix = path.join(ASSET_URI_ROOT, M3U8_DIR_LIST[index]);
+        const uriPrefix = path.join(tsUrlRoot, m3u8NameList[index]);
         playlist.segments.forEach(
             (segment) => (segment.line = `#EXTINF:${segment.duration},\n${path.join(uriPrefix, segment.tsFile)}`)
         );
